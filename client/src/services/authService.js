@@ -3,7 +3,7 @@ import api from '../utils/api';
 export const authService = {
   async register(name, email, password) {
     try {
-      const response = await api.post('/users/register', { name, email, password });
+      const response = await api.post('/users/register', { name, email, password }, { withCredentials: true });
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : new Error('Registration failed');
@@ -12,7 +12,7 @@ export const authService = {
 
   async login(email, password) {
     try {
-      const response = await api.post('/users/login', { email, password });
+      const response = await api.post('/users/login', { email, password }, { withCredentials: true });
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : new Error('Login failed');
