@@ -1,89 +1,88 @@
-import React, { useState, useEffect } from 'react';
-import { taskService } from '../../services/taskService';
-import { toast } from 'react-hot-toast';
+import React, { useState } from 'react';
+import { useTask } from '../../context/TaskContext';
 import TaskItem from './TaskItem';
 import TaskForm from './TaskForm';
+import { PlusIcon, FilterIcon } from 'lucide-react';
 
 const TaskList = () => {
-  const [tasks, setTasks] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [editingTask, setEditingTask] = useState(null);
+  const { tasks, loading } = useTask();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [filter, setFilter] = useState({
+    priority: '',
+    status: ''
+  });
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
+  const filteredTasks = tasks.filter(task => {
+    const priorityMatch = !filter.priority || task.priority === Number(filter.priority);
+    const statusMatch = !filter.status || task.status === filter.status;
+    return priorityMatch && statusMatch;
+  });
 
-  const fetchTasks = async () => {
-    try {
-      const fetchedTasks = await taskService.getTasks();
-      setTasks(fetchedTasks);
-      setIsLoading(false);
-    } catch (error) {
-      toast.error('Failed to fetch tasks');
-      setIsLoading(false);
-    }
-  };
-
-  const handleTaskDelete = async (taskId) => {
-    try {
-      await taskService.deleteTask(taskId);
-      setTasks(tasks.filter(task => task._id !== taskId));
-      toast.success('Task deleted successfully');
-    } catch (error) {
-      toast.error('Failed to delete task');
-    }
-  };
-
-  const handleTaskUpdate = (updatedTask) => {
-    setTasks(tasks.map(task => 
-      task._id === updatedTask._id ? updatedTask : task
-    ));
-    setEditingTask(null);
-  };
-
-  const handleTaskCreated = (newTask) => {
-    setTasks([...tasks, newTask]);
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-indigo-500"></div>
+      <div className="flex justify-center items-center h-full">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="grid md:grid-cols-2 gap-8">
-        <div>
-          <h2 className="text-2xl font-bold mb-6">
-            {editingTask ? 'Edit Task' : 'Create New Task'}
-          </h2>
-          <TaskForm 
-            onTaskCreated={handleTaskCreated}
-            initialTask={editingTask}
-            onTaskUpdated={handleTaskUpdate}
-          />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold mb-6">Your Tasks</h2>
-          {tasks.length === 0 ? (
-            <p className="text-gray-500">No tasks found. Create your first task!</p>
-          ) : (
-            <div className="space-y-4">
-              {tasks.map(task => (
-                <TaskItem 
-                  key={task._id} 
-                  task={task} 
-                  onDelete={handleTaskDelete}
-                  onEdit={setEditingTask}
-                />
-              ))}
-            </div>
-          )}
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">My Tasks</h1>
+        <div className="flex space-x-2">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center hover:bg-blue-600"
+          >
+            <PlusIcon className="mr-2" size={20} /> Add Task
+          </button>
         </div>
       </div>
+
+      <div className="flex space-x-4 mb-6">
+        <select 
+          value={filter.priority} 
+          onChange={(e) => setFilter({...filter, priority: e.target.value})}
+          className="border rounded-md px-3 py-2"
+        >
+          <option value="">All Priorities</option>
+          {[1,2,3,4,5].map(p => (
+            <option key={p} value={p}>Priority {p}</option>
+          ))}
+        </select>
+        <select 
+          value={filter.status} 
+          onChange={(e) => setFilter({...filter, status: e.target.value})}
+          className="border rounded-md px-3 py-2"
+        >
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="finished">Finished</option>
+        </select>
+      </div>
+
+      {filteredTasks.length === 0 ? (
+        <div className="text-center text-gray-500">
+          No tasks found. Create a new task!
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredTasks.map(task => (
+            <TaskItem key={task._id} task={task} />
+          ))}
+        </div>
+      )}
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+            <TaskForm 
+              onClose={() => setIsModalOpen(false)} 
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
